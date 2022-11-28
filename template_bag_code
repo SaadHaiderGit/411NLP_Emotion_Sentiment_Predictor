@@ -34,19 +34,19 @@ if __name__ == "__main__":
 
 
     #Get corpus, then find senses
-    #target_file = "plant.wsd"      #was used for debugging
-    target_file = sys.argv[1]
-    target_word = (target_file.split(".wsd"))[0]    #strip off ".wsd" to get the target word
+    target_file = "train.txt"      #was used for debugging
+    #target_file = sys.argv[1]
+    #target_word = (target_file.split(".wsd"))[0]    #strip off ".wsd" to get the target word
     file = open(target_file)
     txt = [line for line in file if line != "\n"]   #get the entire corpus
     instance_num = int(len(txt)/6)                  #get the total number of instances
 
     sense = []                          #comb through the corpus to find each possible sense
     for i in range(instance_num):
-        poss_sense = (txt[6*i+1].split('"'))[3]
+        poss_sense = (txt[i].split(';'))[1]
         if poss_sense not in sense:
             sense.append(poss_sense)
-        if len(sense) == 2:             #as only 2 senses are used for this project, stop once both senses are found
+        if len(sense) == 6:             #as only 2 senses are used for this project, stop once both senses are found
             break
 
 
