@@ -39,14 +39,14 @@ if __name__ == "__main__":
     #target_word = (target_file.split(".wsd"))[0]    #strip off ".wsd" to get the target word
     file = open(target_file)
     txt = [line for line in file if line != "\n"]   #get the entire corpus
-    instance_num = int(len(txt)/6)                  #get the total number of instances
+    instance_num = int(len(txt))                  #get the total number of instances
 
     sense = []                          #comb through the corpus to find each possible sense
     for i in range(instance_num):
         poss_sense = (txt[i].split(';'))[1]
         if poss_sense not in sense:
             sense.append(poss_sense)
-        if len(sense) == 6:             #as only 2 senses are used for this project, stop once both senses are found
+        if len(sense) == 6:             #as only 6 senses are used for this project, stop once both senses are found
             break
 
 
@@ -61,17 +61,19 @@ if __name__ == "__main__":
     for m in range(4):          #for first four folds, add the appropriate instance information needed to calculate sense
         folds.append([])        
         for i in range(fold_num):
-            instance_index = (fold_num * 6 * m) + (6 * i)                       #find the index of the instances we are pulling from in the text
-            folds[m].append( (txt[instance_index+1], txt[instance_index+3]) )   #(only <answer instance...> and the actual sentence are needed for extraction purpose)
+            instance_index = (fold_num * m) + (i)   #find the index of the instances we are pulling from in the text
+            instance_values = txt[instance_index].split(";")
+            folds[m].append( (instance_values[0], instance_values[1]) )   #(only <answer instance...> and the actual sentence are needed for extraction purpose)
     
     folds.append([])            #for last fold, take the remaining instances and their info
     for i in range(last_fold_num):
-        instance_index = (fold_num * 6 * 4) + (6 * i)
-        folds[4].append( (txt[instance_index+1], txt[instance_index+3]) )        
+        instance_index = (fold_num * 4) + (i)
+        instance_values = txt[instance_index].split(";")
+        folds[4].append( (instance_values[0], instance_values[1]) )       
 
 
     #----------------------------------------LOOP FOR USING FOLDS TO FIND WSD----------------------------------------
-    out = open(target_word + ".wsd.out", "w")
+    out = open("emotion_labels" + ".out", "w")
     overall_corr_predictions = 0
     
 
@@ -90,27 +92,26 @@ if __name__ == "__main__":
             if x == m:      #skip the test fold
                 continue
             for s in range(len(folds[x])):
-                curr_sense = (folds[x][s][0].split('"'))[3]         #take the sense of each fold
+                curr_sense = folds[x][s][1]        #take the sense of each fold
                 for i in range(len(sense_count)):
                     if curr_sense == sense_count[i][0]:                #then increase the count of that sense
                         sense_count[i][1] += 1
-                        sentence = folds[x][s][1]                   #also gather the words of the sentence for that sense
+                        sentence = folds[x][s][0]                   #also gather the words of the sentence for that sense
                         for words in sentence.lower().split():
-                            if words != "<head>" + target_word + "</head>":     #(don't include the target word) 
-                                if words[0] in string.punctuation:              #(strip off beginning and ending punctuation, for accurate counts)
-                                    words = words[1:]
-                                    if words == "":
-                                        continue
-                                if words[-1] in string.punctuation:                             
-                                    words = words[:-1]
-                                    if words == "":
-                                        continue
-                                if words not in word_bank:
-                                    word_bank.append(words)
-                                if words not in word_count[i]:                  #(if new word, add to dict; otherwise +1 to count)
-                                    word_count[i][words] = 1
-                                else:
-                                    word_count[i][words] += 1
+                            if words[0] in string.punctuation:              #(strip off beginning and ending punctuation, for accurate counts)
+                                words = words[1:]
+                                if words == "":
+                                    continue
+                            if words[-1] in string.punctuation:                             
+                                words = words[:-1]
+                                if words == "":
+                                    continue
+                            if words not in word_bank:
+                                word_bank.append(words)
+                            if words not in word_count[i]:                  #(if new word, add to dict; otherwise +1 to count)
+                                word_count[i][words] = 1
+                            else:
+                                word_count[i][words] += 1
                         break;
 
 
@@ -143,17 +144,16 @@ if __name__ == "__main__":
         predictions = len(folds[m])         #the number of instances in the test fold = the number of predictions made 
 
         for s in range(len(folds[m])):      #for each test fold instance, pull out its sentence and predict it with DL_list
-            id = (folds[m][s][0].split('"'))[1]
-            ground_truth = (folds[m][s][0].split('"'))[3]
-            sentence = folds[m][s][1].lower().split()
+            id = folds[m][s][0]
+            ground_truth = folds[m][s][1]
+            sentence = folds[m][s][0].lower().split()
             for i, words in enumerate(sentence):
-                if words != "<head>" + target_word + "</head>":     #(don't include the target word) 
-                    if words[0] in string.punctuation:              #(strip off beginning and ending punctuation, for accurate predictions)
-                        sentence[i] = words[1:]
-                        if words == "":
-                            continue
-                    if words[-1] in string.punctuation:                             
-                        sentence[i] = words[:-1]
+                if words[0] in string.punctuation:              #(strip off beginning and ending punctuation, for accurate predictions)
+                    sentence[i] = words[1:]
+                    if words == "":
+                        continue
+                if words[-1] in string.punctuation:                             
+                    sentence[i] = words[:-1]
 
             for i in DL_list:                                       #Predict the sentence. Either a feature word is found, or a tiebreaker is needed.
                 if i[0] in sentence or i[0] == "<TIEBREAK \>":
