@@ -1,6 +1,7 @@
-#NLP Assignment 3 -- WSD.py
+#CIS 411 NLP Final Project
 
-#This program is trained to learn the various sense of a word, then is tested with the Naive Bayes algorithm to determine which sense is being used.
+#This program was adapted for use from CIS 411 assignment 3; sense in this instance refers to the sentiment or emotion conveyed by a given text string
+#This program is trained to learn the various sense of a word, then uses a variety of algorithms to determine the sense
 #Each dataset is divided into five folds, with four used for training and one for test; this is done 5 times until all five folds have been tested.
 
 
@@ -10,6 +11,9 @@ import math
 import string
 import copy
 
+CONST_SENSE_NUM = 6 #the number of anticipated senses for the training/test set
+
+#the stop words skipped over some variations
 stop_words = ['ourselves', 'hers', 'between', 'yourself', 'but', 'again', 'there', 'about', 'once', 'during', 
 'out', 'very', 'having', 'with', 'they', 'own', 'an', 'be', 'some', 'for', 'do', 'its', 'yours', 'such', 'into', 
 'of', 'most', 'itself', 'other', 'off', 'is', 's', 'am', 'or', 'who', 'as', 'from', 'him', 'each', 'the', 
@@ -20,7 +24,7 @@ stop_words = ['ourselves', 'hers', 'between', 'yourself', 'but', 'again', 'there
 'herself', 'has', 'just', 'where', 'too', 'only', 'myself', 'which', 'those', 'i', 'after', 'few', 'whom', 't', 'being', 
 'if', 'theirs', 'my', 'against', 'a', 'by', 'doing', 'it', 'how', 'further', 'was', 'here', 'than']
 
-
+#used for DL calculations
 def NBC(feature):
     '''Returns the probabilities for a sense given a feature, using Naive Bayes Classifier.'''
     p_s_given_f = []
@@ -31,6 +35,18 @@ def NBC(feature):
         p_s_given_f.append(p_f * sense_probs[i])                #p(S|F) --> p(F|S) * p(S)
     return p_s_given_f
 
+#used for NBC calculations
+def multiFeatureNBC(feature):
+    p_f_given_s = []
+    for i in range(len(sense_count)):
+        if feature not in word_count[i]:
+            word_count[i][feature] = 0
+        p_f_given_s.append((word_count[i][feature] + 1) / s_f_dem[i])         #p(F|S) --> [(count(feature) + 1) / (count(sense) + V)]
+
+    return p_f_given_s #returns the list of p(F|S) for each sense S
+
+#calculates the probablity that a given feature does not indicate a given sense
+#used for DL calculations
 def notNBC(feature):
     p_ns_given_f = []
     for i in range(len(sense_count)):
@@ -61,8 +77,8 @@ if __name__ == "__main__":
 
 
     #Get corpus, then find senses
-    target_file = "train.txt"      #was used for debugging
-    #target_file = sys.argv[1]
+    #target_file = "train.txt"      #was used for debugging
+    target_file = sys.argv[1]
     file = open(target_file)
     txt = [line for line in file if line != "\n"]   #get the entire corpus
     instance_num = int(len(txt))                  #get the total number of instances
@@ -72,7 +88,7 @@ if __name__ == "__main__":
         poss_sense = (txt[i].split(';'))[1]
         if poss_sense not in sense:
             sense.append(poss_sense)
-        if len(sense) == 6:             #as only 6 senses are used for this project, stop once both senses are found
+        if len(sense) == CONST_SENSE_NUM:             #stop once all senses are found
             break
 
 
@@ -99,11 +115,12 @@ if __name__ == "__main__":
 
 
     #----------------------------------------LOOP FOR USING FOLDS TO FIND WSD----------------------------------------
-    out = open("emotion_labels" + ".out", "w")
-    overall_corr_predictions = 0
-    overall_baseline_pred = 0
-    sense_confusion = [{},{},{},{},{}]
+    overall_corr_predictions = 0 #used for DL variation
+    overall_baseline_pred = 0 #used to get baseline
+    overall_nbc_corr_pred = 0 #used for NBC variations
 
+     #used to determine how often each sense is confused for another in a given fold
+    sense_confusion = [{},{},{},{},{}]
     for fold in sense_confusion:
         for x in sense:
             fold[x] = {}
@@ -140,7 +157,7 @@ if __name__ == "__main__":
                                 words = words[:-1]
                                 if words == "":
                                     continue
-                            if words in stop_words: #removes stop words from sentence
+                            if words in stop_words: #removes stop words from sentence; commented out for variations that include stop words
                                 continue
 
                             if words not in word_bank:
@@ -179,19 +196,12 @@ if __name__ == "__main__":
            
         DL_list = sorted(DL_list, key = lambda x: -x[2])  
         DL_list.append(["<TIEBREAK \>", sense[f_given_s_probs.index(probs_reverse_sorted[0])], 0]) #if the DL_list fails to predict the sense, use the higher prob. sense as the tiebreaker)
-
-        # s_count = {"sadness\n":[],"anger\n":[],"love\n":[],"surprise\n":[],"fear\n":[],"joy\n":[],}
-        # for word in DL_list:
-        #     if len(s_count[word[1]]) < 10:
-        #         s_count[word[1]].append(word[0])
-
-        # print(s_count)
            
 
 
         #-----TEST-----
-        out.write("Fold " + str(m+1) + "\n")
         corr_predictions = 0
+        nbc_corr_predictions = 0
         baseline_predictions = 0
         most_prob_sense = -1
         predictions = len(folds[m])         #the number of instances in the test fold = the number of predictions made 
@@ -208,6 +218,7 @@ if __name__ == "__main__":
             if sense[most_prob_sense] == ground_truth:
                 baseline_predictions += 1
             sentence = folds[m][s][0].lower().split()
+            probabilities = copy.deepcopy(sense_probs)
             for i, words in enumerate(sentence):
 
                 if words[0] in string.punctuation:              #(strip off beginning and ending punctuation, for accurate predictions)
@@ -216,31 +227,48 @@ if __name__ == "__main__":
                         continue
                 if words[-1] in string.punctuation:                             
                     sentence[i] = words[:-1]
+                
+                if words in stop_words:     #ignores stop words in test set
+                    continue
 
-            for i in DL_list:                                       #Predict the sentence. Either a feature word is found, or a tiebreaker is needed.
+                p_f_s = multiFeatureNBC(words) #calculates the probability of each sense for the item in the test set based on its features
+                for p in range(len(p_f_s)):
+                    probabilities[p] *= p_f_s[p]
+
+            #selects the highest probability as the sense of the sentence, checks accuracy of prediction
+            max_arg = probabilities.index(max(probabilities))
+            if sense[max_arg] == ground_truth:
+                nbc_corr_predictions += 1
+
+            else:
+                sense_confusion[m][ground_truth][sense[max_arg]] += 1 #if prediction is incorrect, saves what sense it was confused for
+
+            for i in DL_list:                                       #Predict the sentence sense based off of DL. Either a feature word is found, or a tiebreaker is needed.
                 if i[0] in sentence or i[0] == "<TIEBREAK \>":
                     if i[1] == ground_truth:                        #If the feature's associated sense matches the ground truth, increment corr_predictions
                         corr_predictions += 1
-                    # else:
-                    #     sense_confusion[m][ground_truth][i[1]] += 1
-                    out.write(id + " " + i[1] + "\n")
+                   
                     break;
 
-        fold_acc = corr_predictions / predictions * 100   
-        baseline_acc = baseline_predictions / predictions * 100                      #output the fold's accuracy
-        print("Accuracy of fold " + str(m+1) + ":", round(fold_acc, 1), "%") 
-        # for correct in sense_confusion[m].items():
+        fold_acc = corr_predictions / predictions * 100 
+        nbc_fold_acc = nbc_corr_predictions / predictions *100  
+        baseline_acc = baseline_predictions / predictions * 100                      #output the fold's accuracy for DL and NBC
+        print("DL accuracy of fold " + str(m+1) + ":", round(fold_acc, 1), "%") 
+        print("NBC accuracy of fold " + str(m+1) + ":", round(nbc_fold_acc,1), "%")
+        # for correct in sense_confusion[m].items(): #displays what senses were confused for others; uncomment to view
         #     for confused_for in correct:
         #         print(confused_for)
-        #print("Baseline accuracy of fold "+ str(m+1) + ":", round(baseline_acc, 1), "%")    
+        #print("Baseline accuracy of fold "+ str(m+1) + ":", round(baseline_acc, 1), "%")    #displays baseline prediction accuracy
         overall_corr_predictions += corr_predictions                         #add up the number of correct predictions for later
         overall_baseline_pred += baseline_predictions
-        out.write("\n")
+        overall_nbc_corr_pred += nbc_corr_predictions
 
 
     #The loop has ended. Find the total accuracy (and close the output).
     overall_fold_acc = overall_corr_predictions / instance_num * 100            #(instance_num is all of the instances tested in this file)
     overall_baseline_acc = overall_baseline_pred / instance_num *100
-    print("Total accuracy:", round(overall_fold_acc, 1), "%")
-    #print("Baseline accuracy:", round(overall_baseline_acc,1),"%")
-    out.close()
+    overall_nbc_acc = overall_nbc_corr_pred / instance_num *100
+    print("DL total accuracy:", round(overall_fold_acc, 1), "%")
+    print("NBC total accuracy:", round(overall_nbc_acc, 1), "%")
+    #print("Baseline accuracy:", round(overall_baseline_acc,1),"%")#displays baseline prediction accuracy
+
