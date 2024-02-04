@@ -9,5 +9,4 @@ The provided code can be used to run the model and display results on accuracy. 
 Here is an example:
 ![image](https://github.com/SaadHaiderGit/411NLP_Emotion_Sentiment_Predictor/assets/118562950/de72aebd-2362-4a1f-be7d-2a7522677fbc)
 
-DL = Decision List
-NBC = Naive Bayes Classifier
+(DL = Decision List, NBC = Naive Bayes Classifier)
