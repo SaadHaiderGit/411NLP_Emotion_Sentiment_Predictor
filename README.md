@@ -7,6 +7,7 @@ The Emotion Sentiment Predicator uses no libaries and instead has an NLP model m
 The provided code can be used to run the model and display results on accuracy. You can take the github link and clone it to your local repo. To run the program, open it in the terminal and add a system argument for the desired text file you wish to use. (This repo comes with a train.txt file, which contains the cleaned corpus of the Huggingface Emotion dataset, but you can use your own corpus if you desire.)
 
 Here is an example:
-![image](https://github.com/SaadHaiderGit/411NLP_Emotion_Sentiment_Predictor/assets/118562950/de72aebd-2362-4a1f-be7d-2a7522677fbc)
+![image](https://github.com/SaadHaiderGit/411NLP_Emotion_Sentiment_Predictor/assets/118562950/a8d336f7-0c0e-4942-aec8-47213a744cad)
+
 
 (DL = Decision List, NBC = Naive Bayes Classifier)
